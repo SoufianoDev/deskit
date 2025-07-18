@@ -1,7 +1,7 @@
 plugins {
     kotlin("jvm")
     `java-library`
-    id("org.jetbrains.compose")
+    id("org.jetbrains.compose") version "1.9.0-alpha03"
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.dokka") version "2.0.0"
 }
