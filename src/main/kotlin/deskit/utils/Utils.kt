@@ -18,6 +18,9 @@ package deskit.utils
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +32,7 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import deskit.dialogs.info.InfoDialog
 import deskit.resources.*
@@ -319,6 +323,46 @@ internal fun InfoRow(
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.End,
                 modifier = locationModifier
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun LayoutViewToggle(
+    isListView: Boolean,
+    onListGridViewChange: () -> Unit
+){
+    TooltipBox(
+        tooltip = {
+            RichTooltip(
+                modifier = Modifier,
+                shape = MaterialTheme.shapes.medium,
+                caretSize = DpSize(10.dp, 7.dp),
+                title = {
+                    Text(
+                        text = if(isListView) "List view" else "Grid view",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            ) {
+                Text(
+                    text = if(isListView) "Click to switch to grid view" else "Click to switch to list view",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        },
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+        state = rememberTooltipState(isPersistent = true)
+    ){
+        IconButton(
+            onClick = {onListGridViewChange()},
+            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
+        ){
+            Icon(
+                imageVector = if (isListView) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
+                contentDescription = null
             )
         }
     }
