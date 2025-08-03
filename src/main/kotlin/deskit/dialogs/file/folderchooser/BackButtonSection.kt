@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import deskit.utils.LayoutViewToggle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.File
@@ -37,7 +38,9 @@ internal fun BackButtonSection(
     coroutineScope: CoroutineScope,
     pathScrollState: ScrollState,
     onBackClicked: (File) -> Unit,
-    currentDir: File
+    currentDir: File,
+    isListView: Boolean = true,
+    onListGridViewChange: () -> Unit = {}
 ){
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -46,6 +49,7 @@ internal fun BackButtonSection(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ){
             if (currentDir.parentFile != null) {
                 IconButton(
@@ -69,5 +73,7 @@ internal fun BackButtonSection(
             Spacer(Modifier.width(3.dp))
             Text("Current Directory", style = MaterialTheme.typography.labelLarge)
         }
+
+        LayoutViewToggle(isListView, onListGridViewChange)
     }
 }
