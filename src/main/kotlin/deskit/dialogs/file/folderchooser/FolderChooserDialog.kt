@@ -47,16 +47,13 @@ import java.io.File
  * @param title The title text displayed in the dialog window's title bar. Defaults to "Choose Folder".
  * @param startDirectory The initial directory to display when the dialog opens.
  *                       Defaults to the user's Downloads folder.
- * @param onFolderSelected Callback function invoked with the selected File (directory) when
- *                         the user clicks Choose.
+ * @param onFolderSelected Callback function invoked with the selected [File] (directory) when
+ *                         the user clicks the "Choose" button.
  * @param isFileInfoDialogResizable Whether the file info dialog can be resized. Defaults to `true`.
- * @param onCancel Callback function invoked when the user cancels the operation.
- *
- * Features:
- * - Path breadcrumb navigation with scrollbar
- * - Visual distinction between selectable folders and non-selectable files
- * - User guidance through InfoDialog when attempting to select files
- * - Folder content browsing with vertical scrollbar
+ * @param colors The colors to be used for the folder chooser dialog. See [FolderChooserColors] for more details.
+ * @param allowSoftWrapFolderName Whether to allow soft wrapping for folder names if they are too long. Defaults to `false`.
+ * @param allowSoftWrapFileName Whether to allow soft wrapping for file names if they are too long. Defaults to `false`.
+ * @param onCancel Callback function invoked when the user cancels the operation (e.g., by closing the dialog).
  *
  * @sample deskit.dialogs.file.folderchooser.FolderChooserDialogSample
  */
@@ -67,6 +64,8 @@ fun FolderChooserDialog(
     onFolderSelected: (File) -> Unit,
     isFileInfoDialogResizable: Boolean = true,
     colors: FolderChooserColors = FolderChooserDefaults.colors(),
+    allowSoftWrapFolderName: Boolean = false,
+    allowSoftWrapFileName: Boolean = false,
     onCancel: () -> Unit
 ) {
     var currentDir by remember { mutableStateOf(startDirectory) }
@@ -84,6 +83,8 @@ fun FolderChooserDialog(
     val pathSegments = generateSequence(currentDir) { it.parentFile }
         .toList()
         .asReversed()
+
+    var isListView by remember { mutableStateOf(true) }
 
     val dialogState = rememberDialogState(size = DpSize(600.dp, 600.dp), position = WindowPosition(Alignment.Center))
 
@@ -119,7 +120,11 @@ fun FolderChooserDialog(
                     coroutineScope = coroutineScope,
                     pathScrollState = pathScrollState,
                     onBackClicked = { currentDir = it },
-                    currentDir = currentDir
+                    currentDir = currentDir,
+                    isListView = isListView,
+                    onListGridViewChange = {
+                        isListView = !isListView
+                    }
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -135,6 +140,9 @@ fun FolderChooserDialog(
                     },
                     modifier = Modifier.weight(1f),
                     colors = colors,
+                    isListView = isListView,
+                    allowSoftWrapFolderName = allowSoftWrapFolderName,
+                    allowSoftWrapFileName = allowSoftWrapFileName
                 )
 
                 Spacer(Modifier.height(8.dp))
