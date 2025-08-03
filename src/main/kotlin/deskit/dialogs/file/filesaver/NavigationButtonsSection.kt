@@ -27,7 +27,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
+import deskit.utils.LayoutViewToggle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.File
@@ -38,6 +41,8 @@ internal fun NavigationButtonsSection(
     coroutineScope: CoroutineScope,
     pathScrollState: ScrollState,
     currentDir: File,
+    isListView: Boolean,
+    onListGridViewChange: () -> Unit,
     onBackClicked: (File) -> Unit,
     onNewFolderClicked: () -> Unit
 ) {
@@ -70,12 +75,13 @@ internal fun NavigationButtonsSection(
             Text("Choose Folder", style = MaterialTheme.typography.labelLarge)
         }
 
-        Box(
-            contentAlignment = Alignment.Center,
-        ) {
-            IconButton(onClick = onNewFolderClicked) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ){
+            IconButton(onClick = onNewFolderClicked, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
                 Icon(Icons.Default.CreateNewFolder, contentDescription = "New Folder")
             }
+            LayoutViewToggle(isListView, onListGridViewChange)
         }
     }
 }

@@ -44,18 +44,15 @@ import java.io.File
  * a filename for saving. It includes file existence checking and animated folder creation UI.
  *
  * @param title The title text displayed in the dialog window's title bar. Defaults to "Save As".
+ * @param startDirectory Default directory to save a file.
  * @param suggestedFileName The initial filename to populate in the text field. Can be empty.
  * @param extension The file extension to append to the saved file (e.g., ".txt", ".pdf").
  * @param resizableFileInfoDialog Whether the file info dialog can be resized. Defaults to `true`.
+ * @param allowSoftWrapFolderName Whether to allow soft wrapping for folder names if they are too long. Defaults to `false`.
+ * @param allowSoftWrapFileName Whether to allow soft wrapping for file names if they are too long. Defaults to `false`.
+ * @param colors The colors to be used for the folder chooser dialog. See [FileSaverColors] for more details.
  * @param onSave Callback function invoked with the selected File when the user clicks Save.
  * @param onCancel Callback function invoked when the user cancels the operation.
- *
- * Features:
- * - Directory navigation with clickable breadcrumb trail and horizontal scrollbar
- * - File browsing with vertical scrollbar
- * - New folder creation with animated UI
- * - File existence validation
- * - Back button for parent directory navigation
  *
  * @sample deskit.dialogs.file.filesaver.FileSaverDialogSample
  */
@@ -64,9 +61,11 @@ fun FileSaverDialog(
     title: String = "Save As",
     startDirectory: File = File(System.getProperty("user.home") + "/Downloads"),
     suggestedFileName: String = "",
-    colors: FileSaverColors = FileSaverDefaults.colors(),
     extension: String,
     resizableFileInfoDialog: Boolean = true,
+    allowSoftWrapFolderName: Boolean = false,
+    allowSoftWrapFileName: Boolean = false,
+    colors: FileSaverColors = FileSaverDefaults.colors(),
     onSave: (File) -> Unit,
     onCancel: () -> Unit
 ) {
@@ -76,6 +75,7 @@ fun FileSaverDialog(
     var currentDir by remember { mutableStateOf(startDirectory) }
     val coroutineScope = rememberCoroutineScope()
     var selectedFileForInfo by remember { mutableStateOf<File?>(null) }
+    var isListView by remember { mutableStateOf(true) }
 
     val pathSegments = generateSequence(currentDir) { it.parentFile }
         .toList()
@@ -151,7 +151,9 @@ fun FileSaverDialog(
                     pathScrollState = pathScrollState,
                     currentDir = currentDir,
                     onBackClicked = { currentDir = it },
-                    onNewFolderClicked = { creatingNewFolder = true }
+                    onNewFolderClicked = { creatingNewFolder = true },
+                    isListView = isListView,
+                    onListGridViewChange = {isListView = !isListView}
                 )
 
                 // New folder creation UI
@@ -185,6 +187,9 @@ fun FileSaverDialog(
                     onShowFileInfo = {file ->
                         selectedFileForInfo = file
                     },
+                    isListView = isListView,
+                    allowSoftWrapFileName = allowSoftWrapFileName,
+                    allowSoftWrapFolderName = allowSoftWrapFolderName,
                     colors = colors,
                     modifier = Modifier.weight(1f)
                 )

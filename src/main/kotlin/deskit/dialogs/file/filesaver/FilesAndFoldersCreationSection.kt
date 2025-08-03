@@ -16,6 +16,7 @@ limitations under the License.
 package deskit.dialogs.file.filesaver
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.*
@@ -23,6 +24,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -37,6 +42,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import deskit.dialogs.defaults.FileSaverColors
@@ -52,105 +59,217 @@ internal fun FilesAndFoldersListSection(
     items: List<File>,
     onFolderClicked: (File) -> Unit,
     onShowFileInfo: (File) -> Unit,
+    isListView: Boolean,
+    allowSoftWrapFolderName: Boolean,
+    allowSoftWrapFileName: Boolean,
     colors: FileSaverColors,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier) {
         val listState = rememberLazyListState()
+        val gridState = rememberLazyGridState()
 
         Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(colors.fileAndFolderListBG)
-                    .padding(end = 12.dp)
-            ) {
-                items(items) { item ->
-                    if (item.isDirectory) {
-                        val folderInteractionSource = remember { MutableInteractionSource() }
-                        val isFolderHovered by folderInteractionSource.collectIsHoveredAsState()
+            if(isListView){
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(colors.fileAndFolderListBG)
+                        .padding(end = 12.dp)
+                ) {
+                    items(items) { item ->
+                        if (item.isDirectory) {
+                            val folderInteractionSource = remember { MutableInteractionSource() }
+                            val isFolderHovered by folderInteractionSource.collectIsHoveredAsState()
 
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clip(MaterialTheme.shapes.medium)
-                                .clickable { onFolderClicked(item) }
-                                .padding(9.dp)
-                                .hoverable(folderInteractionSource),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically){
-                                Icon(
-                                    painter = painterResource(Res.drawable.folder),
-                                    contentDescription = null,
-                                    tint = colors.folderIconColor,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = item.name,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = colors.folderNameColor
-                                )
-                            }
-                            AnimatedVisibility(
-                                visible = isFolderHovered,
-                                enter = scaleIn(),
-                                exit = scaleOut()
-                            ){
-                                IconButton(onClick = {onShowFileInfo(item)}, modifier = Modifier.size(20.dp)){
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .clickable { onFolderClicked(item) }
+                                    .padding(9.dp)
+                                    .hoverable(folderInteractionSource),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically){
                                     Icon(
-                                        Icons.Default.Info,
-                                        contentDescription = "Folder info",
-                                        modifier = Modifier.size(20.dp),
-                                        tint = colors.infoIconTint
+                                        painter = painterResource(Res.drawable.folder),
+                                        contentDescription = null,
+                                        tint = colors.folderIconColor,
+                                        modifier = Modifier.size(22.dp)
                                     )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = item.name,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = colors.folderNameColor,
+                                        softWrap = allowSoftWrapFolderName
+                                    )
+                                }
+                                AnimatedVisibility(
+                                    visible = isFolderHovered,
+                                    enter = scaleIn(),
+                                    exit = scaleOut()
+                                ){
+                                    IconButton(onClick = {onShowFileInfo(item)}, modifier = Modifier.size(20.dp)){
+                                        Icon(
+                                            Icons.Default.Info,
+                                            contentDescription = "Folder info",
+                                            modifier = Modifier.size(20.dp),
+                                            tint = colors.infoIconTint
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            val fileInteractionSource = remember { MutableInteractionSource() }
+                            val isFileHovered by fileInteractionSource.collectIsHoveredAsState()
+
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(9.dp)
+                                    .hoverable(fileInteractionSource),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically){
+                                    Icon(
+                                        painter = getFileIcon(item),
+                                        contentDescription = null,
+                                        tint = colors.fileIconColor,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = item.name,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = colors.fileNameColor,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        softWrap = allowSoftWrapFileName
+                                    )
+                                }
+                                AnimatedVisibility(
+                                    visible = isFileHovered,
+                                    enter = scaleIn(),
+                                    exit = scaleOut()
+                                ){
+                                    IconButton(onClick = {onShowFileInfo(item)}, modifier = Modifier.size(20.dp)){
+                                        Icon(
+                                            Icons.Default.Info,
+                                            contentDescription = "File info",
+                                            modifier = Modifier.size(20.dp),
+                                            tint = colors.infoIconTint
+                                        )
+                                    }
                                 }
                             }
                         }
-                    } else {
-                        val fileInteractionSource = remember { MutableInteractionSource() }
-                        val isFileHovered by fileInteractionSource.collectIsHoveredAsState()
+                    }
+                }
+            }else{
+                LazyVerticalGrid(
+                    state = gridState,
+                    columns = GridCells.Adaptive(300.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(colors.fileAndFolderListBG)
+                        .padding(end = 12.dp)
+                ){
+                    items(items) { item ->
+                        if (item.isDirectory) {
+                            val folderInteractionSource = remember { MutableInteractionSource() }
+                            val isFolderHovered by folderInteractionSource.collectIsHoveredAsState()
 
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(9.dp)
-                                .hoverable(fileInteractionSource),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically){
-                                Icon(
-                                    painter = getFileIcon(item),
-                                    contentDescription = null,
-                                    tint = colors.fileIconColor,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = item.name,
-                                    overflow = TextOverflow.Ellipsis,
-                                    color = colors.fileNameColor,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                            AnimatedVisibility(
-                                visible = isFileHovered,
-                                enter = scaleIn(),
-                                exit = scaleOut()
-                            ){
-                                IconButton(onClick = {onShowFileInfo(item)}, modifier = Modifier.size(20.dp)){
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .clickable { onFolderClicked(item) }
+                                    .padding(9.dp)
+                                    .animateItem(placementSpec = tween())
+                                    .hoverable(folderInteractionSource),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically){
                                     Icon(
-                                        Icons.Default.Info,
-                                        contentDescription = "File info",
-                                        modifier = Modifier.size(20.dp),
-                                        tint = colors.infoIconTint
+                                        painter = painterResource(Res.drawable.folder),
+                                        contentDescription = null,
+                                        tint = colors.folderIconColor,
+                                        modifier = Modifier.size(22.dp)
                                     )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = item.name,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = colors.folderNameColor,
+                                        softWrap = allowSoftWrapFolderName
+                                    )
+                                }
+                                AnimatedVisibility(
+                                    visible = isFolderHovered,
+                                    enter = scaleIn(),
+                                    exit = scaleOut()
+                                ){
+                                    IconButton(onClick = {onShowFileInfo(item)}, modifier = Modifier.size(20.dp)){
+                                        Icon(
+                                            Icons.Default.Info,
+                                            contentDescription = "Folder info",
+                                            modifier = Modifier.size(20.dp),
+                                            tint = colors.infoIconTint
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            val fileInteractionSource = remember { MutableInteractionSource() }
+                            val isFileHovered by fileInteractionSource.collectIsHoveredAsState()
+
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(9.dp)
+                                    .animateItem(placementSpec = tween())
+                                    .hoverable(fileInteractionSource),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically){
+                                    Icon(
+                                        painter = getFileIcon(item),
+                                        contentDescription = null,
+                                        tint = colors.fileIconColor,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = item.name,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = colors.fileNameColor,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        softWrap = allowSoftWrapFileName
+                                    )
+                                }
+                                AnimatedVisibility(
+                                    visible = isFileHovered,
+                                    enter = scaleIn(),
+                                    exit = scaleOut()
+                                ){
+                                    IconButton(onClick = {onShowFileInfo(item)}, modifier = Modifier.size(20.dp)){
+                                        Icon(
+                                            Icons.Default.Info,
+                                            contentDescription = "File info",
+                                            modifier = Modifier.size(20.dp),
+                                            tint = colors.infoIconTint
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -158,16 +277,31 @@ internal fun FilesAndFoldersListSection(
                 }
             }
 
-            VerticalScrollbar(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .fillMaxHeight(),
-                adapter = rememberScrollbarAdapter(listState),
-                style = LocalScrollbarStyle.current.copy(
-                    hoverColor = colors.scrollbarHoverColor,
-                    unhoverColor = colors.scrollbarUnhoverColor
+            if(isListView){
+                VerticalScrollbar(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .fillMaxHeight()
+                        .pointerHoverIcon(PointerIcon.Hand),
+                    adapter = rememberScrollbarAdapter(listState),
+                    style = LocalScrollbarStyle.current.copy(
+                        hoverColor = colors.scrollbarHoverColor,
+                        unhoverColor = colors.scrollbarUnhoverColor
+                    )
                 )
-            )
+            }else{
+                VerticalScrollbar(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .fillMaxHeight()
+                        .pointerHoverIcon(PointerIcon.Hand),
+                    adapter = rememberScrollbarAdapter(gridState),
+                    style = LocalScrollbarStyle.current.copy(
+                        hoverColor = colors.scrollbarHoverColor,
+                        unhoverColor = colors.scrollbarUnhoverColor
+                    )
+                )
+            }
         }
     }
 }
