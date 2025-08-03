@@ -48,19 +48,13 @@ import java.io.File
  * navigation trail.
  *
  * @param title The title text displayed in the dialog window's title bar. Defaults to "Choose File".
- * @param startDirectory The initial directory to display when the dialog opens.
- *                       Defaults to the user's Downloads folder.
+ * @param startDirectory The initial directory to display when the dialog opens. Defaults to the user's Downloads folder.
  * @param allowedExtensions Optional list of file extensions to filter by (e.g., ["txt", "pdf"]).
  *                          If null, all files are shown. Extensions are case-insensitive.
+ * @param colors The colors to be used for the folder chooser dialog. See [FileChooserColors] for more details.
+ * @param resizableFileInfoDialog Whether the file info dialog can be resized. Defaults to `true`.
  * @param onFileSelected Callback function invoked with the selected File when the user clicks a file.
  * @param onCancel Callback function invoked when the user cancels the operation.
- *
- * Features:
- * - Smart file type icons based on extension
- * - Directory and file navigation
- * - Bold breadcrumb trail with clickable segments
- * - Optional file extension filtering
- * - Color-coded folders with primary theme color
  *
  * @sample deskit.dialogs.file.filechooser.FileChooserDialogSample
  */
