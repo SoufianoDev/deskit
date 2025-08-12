@@ -25,6 +25,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.io.File
@@ -57,7 +59,8 @@ internal fun PathSegments(
                     modifier = Modifier
                         .clip(MaterialTheme.shapes.medium)
                         .clickable { onPathSelected(dir) }
-                        .padding(8.dp),
+                        .padding(8.dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
                 )
                 if (index != pathSegments.lastIndex) {
@@ -69,7 +72,8 @@ internal fun PathSegments(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .padding(end = 12.dp),
+                .padding(end = 12.dp)
+                .pointerHoverIcon(PointerIcon.Hand),
             adapter = rememberScrollbarAdapter(scrollState),
             style = LocalScrollbarStyle.current.copy(
                 hoverColor = MaterialTheme.colorScheme.outline,
