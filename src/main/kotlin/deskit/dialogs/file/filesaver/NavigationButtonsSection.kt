@@ -63,7 +63,8 @@ internal fun NavigationButtonsSection(
                                 pathScrollState.animateScrollTo(pathScrollState.maxValue)
                             }
                         }
-                    }
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowCircleLeft,
