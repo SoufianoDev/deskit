@@ -146,7 +146,8 @@ fun FileChooserDialog(
                                     currentDir.parentFile?.let { parent ->
                                         currentDir = parent
                                     }
-                                }
+                                },
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.ArrowCircleLeft,
