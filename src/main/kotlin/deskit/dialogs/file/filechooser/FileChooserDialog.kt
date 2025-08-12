@@ -36,6 +36,7 @@ import androidx.compose.ui.window.rememberDialogState
 import deskit.dialogs.defaults.FileChooserColors
 import deskit.dialogs.defaults.FileChooserDefaults
 import deskit.utils.FileInfoDialog
+import deskit.utils.LayoutViewToggle
 import kotlinx.coroutines.launch
 import java.awt.Dimension
 import java.io.File
@@ -53,6 +54,8 @@ import java.io.File
  *                          If null, all files are shown. Extensions are case-insensitive.
  * @param colors The colors to be used for the folder chooser dialog. See [FileChooserColors] for more details.
  * @param resizableFileInfoDialog Whether the file info dialog can be resized. Defaults to `true`.
+ * @param allowSoftWrapFolderName Whether to allow soft wrapping for folder names if they are too long. Defaults to `false`.
+ * @param allowSoftWrapFileName Whether to allow soft wrapping for file names if they are too long. Defaults to `false`.
  * @param onFileSelected Callback function invoked with the selected File when the user clicks a file.
  * @param onCancel Callback function invoked when the user cancels the operation.
  *
@@ -66,6 +69,8 @@ fun FileChooserDialog(
     allowedExtensions: List<String>? = null,
     colors: FileChooserColors = FileChooserDefaults.colors(),
     resizableFileInfoDialog: Boolean = true,
+    allowSoftWrapFolderName: Boolean = false,
+    allowSoftWrapFileName: Boolean = false,
     onFileSelected: (File) -> Unit,
     onCancel: () -> Unit
 ) {
@@ -88,6 +93,8 @@ fun FileChooserDialog(
     val pathSegments = generateSequence(currentDir) { it.parentFile }
         .toList()
         .asReversed()
+
+    var isListView by remember { mutableStateOf(true) }
 
     val dialogState = rememberDialogState(size = DpSize(600.dp, 600.dp), position = WindowPosition(Alignment.Center))
     val pathScrollState = rememberScrollState()
@@ -132,9 +139,7 @@ fun FileChooserDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ){
+                    Row(verticalAlignment = Alignment.CenterVertically,){
                         if (currentDir.parentFile != null) {
                             IconButton(
                                 onClick = {
@@ -152,6 +157,7 @@ fun FileChooserDialog(
                         Spacer(Modifier.width(3.dp))
                         Text("Current Directory", style = MaterialTheme.typography.labelLarge)
                     }
+                    LayoutViewToggle(isListView, onListGridViewChange = {isListView = !isListView})
                 }
 
                 Spacer(Modifier.height(8.dp))
@@ -170,7 +176,10 @@ fun FileChooserDialog(
                     },
                     colors = colors,
                     onFileSelected = onFileSelected,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    isListView = isListView,
+                    allowSoftWrapFolderName = allowSoftWrapFolderName,
+                    allowSoftWrapFileName = allowSoftWrapFileName
                 )
 
 
