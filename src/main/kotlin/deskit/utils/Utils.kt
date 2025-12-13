@@ -294,7 +294,7 @@ internal fun InfoRow(
         )
         if(isLocationLabel && value.length > 20){
             TooltipBox(
-                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                 state = rememberTooltipState(),
                 tooltip = {
                     PlainTooltip {
@@ -328,6 +328,7 @@ internal fun InfoRow(
     }
 }
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun LayoutViewToggle(
@@ -337,9 +338,8 @@ internal fun LayoutViewToggle(
     TooltipBox(
         tooltip = {
             RichTooltip(
-                modifier = Modifier,
+                modifier = Modifier.size(DpSize(10.dp, 7.dp)),
                 shape = MaterialTheme.shapes.medium,
-                caretSize = DpSize(10.dp, 7.dp),
                 title = {
                     Text(
                         text = if(isListView) "List view" else "Grid view",
@@ -353,7 +353,7 @@ internal fun LayoutViewToggle(
                 )
             }
         },
-        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
         state = rememberTooltipState(isPersistent = true)
     ){
         IconButton(
