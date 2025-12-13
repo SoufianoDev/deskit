@@ -1,18 +1,10 @@
 # Deskit
 
-[![](https://jitpack.io/v/zahid4kh/deskit.svg)](https://jitpack.io/#zahid4kh/deskit) [![Kotlin](https://img.shields.io/badge/Kotlin-2.1.20-blue.svg?logo=kotlin)](https://kotlinlang.org/docs/releases.html#release-details) [![Compose](https://img.shields.io/badge/Compose-1.8.0-blue.svg?logo=jetpackcompose)](https://github.com/JetBrains/compose-jb)
+[![](https://jitpack.io/v/zahid4kh/deskit.svg)](https://jitpack.io/#zahid4kh/deskit) [![Kotlin](https://img.shields.io/badge/Kotlin-2.2.21-blue.svg?logo=kotlin)](https://kotlinlang.org/docs/releases.html#release-details) [![Compose](https://img.shields.io/badge/Compose-1.9.3-blue.svg?logo=jetpackcompose)](https://github.com/JetBrains/compose-jb)
 
 A library for desktop components designed for *Compose for Desktop* applications using Kotlin.
 
-[**Latest release 1.4.0**](https://github.com/zahid4kh/deskit/wiki/1.4.0)
-
-## What's New in 1.4.0
-
-- **Layout View Toggle**: Switch between grid and list views in all file dialogs with interactive toggle button
-- **Text Wrapping Controls**: New `allowSoftWrapFolderName` and `allowSoftWrapFileName` parameters for better text handling
-- **Enhanced Compose**: Updated to Compose plugin version 1.9.0-alpha03
-
-See the complete [v1.4.0 Release Notes](https://github.com/zahid4kh/deskit/wiki/1.4.0) for detailed changes.
+[**Latest release 1.4.1**](https://github.com/zahid4kh/deskit/wiki/1.4.1)
 
 ### Demo Video
 
@@ -49,7 +41,7 @@ FolderChooserDialog in action:
 Add Deskit to your Compose for Desktop project:
 
 ```kotlin
-implementation("com.github.zahid4kh:deskit:1.4.0")
+implementation("com.github.zahid4kh:deskit:1.4.1")
 ```
 
 For detailed setup instructions, see the [Installation Guide](https://github.com/zahid4kh/deskit/wiki/Installation).
@@ -133,7 +125,7 @@ For complete documentation, visit the [Deskit Wiki](https://github.com/zahid4kh/
 ## Requirements for building from source
 
 - **Kotlin**: 2.1.20+
-- **Compose Multiplatform**: 1.8.0+
+- **Compose Multiplatform**: 1.9.0-alpha03+
 - **JVM**: 17+
 
 For detailed requirements and compatibility information, see [Requirements](https://github.com/zahid4kh/deskit/wiki/Installation#requirements).
