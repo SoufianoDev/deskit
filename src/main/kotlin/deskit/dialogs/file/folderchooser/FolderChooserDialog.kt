@@ -31,7 +31,6 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberDialogState
 import deskit.dialogs.defaults.FolderChooserColors
 import deskit.dialogs.defaults.FolderChooserDefaults
-import deskit.dialogs.info.InfoDialog
 import deskit.utils.FileInfoDialog
 import deskit.utils.NewFolderOverlayDialog
 import deskit.utils.SearchBarSection
@@ -42,9 +41,7 @@ import java.io.File
  * Displays a folder selection dialog with directory navigation and breadcrumb trail.
  *
  * This dialog allows users to browse and select folders from the file system. It displays
- * both files and directories, but only folders can be selected for the final result.
- * Files are shown with dimmed appearance and attempting to select them will display an
- * informational dialog. System items (those starting with ".") are hidden.
+ * only directories — files are not shown. System items (those starting with ".") are hidden.
  *
  * @param title The title text displayed in the dialog window's title bar. Defaults to "Choose Folder".
  * @param startDirectory The initial directory to display when the dialog opens.
@@ -72,15 +69,14 @@ fun FolderChooserDialog(
 ) {
     val resolvedColorScheme = colorScheme ?: MaterialTheme.colorScheme
     var currentDir by remember { mutableStateOf(startDirectory) }
-    var showFileNotAllowedDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
     var selectedFileForInfo by remember { mutableStateOf<File?>(null) }
 
     val items = remember(currentDir) {
         currentDir.listFiles()
-            ?.filter { !it.name.startsWith(".") }
-            ?.sortedWith(compareBy({ !it.isDirectory }, { it.name }))
+            ?.filter { !it.name.startsWith(".") && it.isDirectory }
+            ?.sortedBy { it.name }
             ?: emptyList()
     }
 
@@ -150,7 +146,6 @@ fun FolderChooserDialog(
                     coroutineScope = coroutineScope,
                     pathScrollState = pathScrollState,
                     items = filteredItems,
-                    onFileClicked = { showFileNotAllowedDialog = true },
                     onFolderSelected = { currentDir = it; searchQuery = "" },
                     onShowFileInfo = { file ->
                         selectedFileForInfo = file
@@ -158,8 +153,7 @@ fun FolderChooserDialog(
                     modifier = Modifier.weight(1f),
                     colors = resolvedColors,
                     isListView = isListView,
-                    allowSoftWrapFolderName = allowSoftWrapFolderName,
-                    allowSoftWrapFileName = allowSoftWrapFileName
+                    allowSoftWrapFolderName = allowSoftWrapFolderName
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -210,13 +204,6 @@ fun FolderChooserDialog(
         }
     }
 
-    if (showFileNotAllowedDialog) {
-        InfoDialog(
-            title = "Cannot Select Files",
-            message = "This dialog only allows selecting folders. Please choose a folder instead.",
-            onClose = { showFileNotAllowedDialog = false }
-        )
-    }
 }
 
 

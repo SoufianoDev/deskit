@@ -22,7 +22,7 @@ FolderChooserDialog in action:
 
 ![Information Dialog with Custom Icon](screenshots/infodialog.png)
 
-*FolderChooserDialog displaying both files (dimmed) and folders with scrollbars*
+*FolderChooserDialog displaying folders with scrollbars*
 
 ![Folder Chooser Dialog with Files](screenshots/folderchooser1.png)
 

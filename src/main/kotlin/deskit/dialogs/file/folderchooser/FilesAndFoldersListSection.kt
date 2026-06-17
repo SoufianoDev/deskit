@@ -49,7 +49,6 @@ import androidx.compose.ui.unit.dp
 import deskit.dialogs.defaults.FolderChooserColors
 import deskit.resources.Res
 import deskit.resources.folder
-import deskit.utils.getFileIcon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -61,14 +60,12 @@ internal fun FilesAndFoldersListSection(
     coroutineScope: CoroutineScope,
     pathScrollState: ScrollState,
     items: List<File>,
-    onFileClicked: () -> Unit,
     onFolderSelected: (File) -> Unit,
     onShowFileInfo: (File) -> Unit,
     modifier: Modifier = Modifier,
     colors: FolderChooserColors,
     isListView: Boolean,
-    allowSoftWrapFolderName: Boolean = false,
-    allowSoftWrapFileName: Boolean = false
+    allowSoftWrapFolderName: Boolean = false
 ){
     Box(
         modifier = modifier
@@ -89,99 +86,51 @@ internal fun FilesAndFoldersListSection(
                         .padding(end = 12.dp)
                 ) {
                     items(items) { item ->
-                        if (item.isDirectory) {
-                            val folderInteractionSource = remember { MutableInteractionSource() }
-                            val isFolderHovered by folderInteractionSource.collectIsHoveredAsState()
+                        val folderInteractionSource = remember { MutableInteractionSource() }
+                        val isFolderHovered by folderInteractionSource.collectIsHoveredAsState()
 
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(MaterialTheme.shapes.medium)
-                                    .clickable {
-                                        onFolderSelected(item)
-                                        //currentDir = item
-                                        coroutineScope.launch {
-                                            pathScrollState.animateScrollTo(pathScrollState.maxValue)
-                                        }
-                                    }
-                                    .padding(9.dp)
-                                    .hoverable(folderInteractionSource),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically){
-                                    Icon(
-                                        painter = painterResource(Res.drawable.folder),
-                                        contentDescription = null,
-                                        tint = colors.folderIconColor,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = item.name,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = colors.folderNameColor,
-                                        softWrap = allowSoftWrapFolderName
-                                    )
-                                }
-                                AnimatedVisibility(
-                                    visible = isFolderHovered,
-                                    enter = scaleIn(),
-                                    exit = scaleOut()
-                                ){
-                                    IconButton(onClick = {onShowFileInfo(item)}, modifier = Modifier.size(20.dp)){
-                                        Icon(
-                                            Icons.Default.Info,
-                                            contentDescription = "Folder info",
-                                            modifier = Modifier.size(20.dp),
-                                            tint = colors.infoIconTint
-                                        )
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.medium)
+                                .clickable {
+                                    onFolderSelected(item)
+                                    coroutineScope.launch {
+                                        pathScrollState.animateScrollTo(pathScrollState.maxValue)
                                     }
                                 }
+                                .padding(9.dp)
+                                .hoverable(folderInteractionSource),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically){
+                                Icon(
+                                    painter = painterResource(Res.drawable.folder),
+                                    contentDescription = null,
+                                    tint = colors.folderIconColor,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = item.name,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = colors.folderNameColor,
+                                    softWrap = allowSoftWrapFolderName
+                                )
                             }
-                        } else {
-                            val fileInteractionSource = remember { MutableInteractionSource() }
-                            val isFileHovered by fileInteractionSource.collectIsHoveredAsState()
-
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(MaterialTheme.shapes.medium)
-                                    .clickable { onFileClicked() }
-                                    .padding(9.dp)
-                                    .hoverable(fileInteractionSource),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically){
+                            AnimatedVisibility(
+                                visible = isFolderHovered,
+                                enter = scaleIn(),
+                                exit = scaleOut()
+                            ){
+                                IconButton(onClick = {onShowFileInfo(item)}, modifier = Modifier.size(20.dp)){
                                     Icon(
-                                        painter = getFileIcon(item),
-                                        contentDescription = null,
-                                        tint = colors.fileIconColor, // Dimmed to indicate non-selectability
-                                        modifier = Modifier.size(22.dp)
+                                        Icons.Default.Info,
+                                        contentDescription = "Folder info",
+                                        modifier = Modifier.size(20.dp),
+                                        tint = colors.infoIconTint
                                     )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = item.name,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = colors.fileNameColor, // Dimmed text
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        softWrap = allowSoftWrapFileName
-                                    )
-                                }
-                                AnimatedVisibility(
-                                    visible = isFileHovered,
-                                    enter = scaleIn(),
-                                    exit = scaleOut()
-                                ){
-                                    IconButton(onClick = {onShowFileInfo(item)}, modifier = Modifier.size(20.dp)){
-                                        Icon(
-                                            Icons.Default.Info,
-                                            contentDescription = "File info",
-                                            modifier = Modifier.size(20.dp),
-                                            tint = colors.infoIconTint
-                                        )
-                                    }
                                 }
                             }
                         }
@@ -198,101 +147,52 @@ internal fun FilesAndFoldersListSection(
                         .padding(end = 12.dp)
                 ){
                     items(items) { item ->
-                        if (item.isDirectory) {
-                            val folderInteractionSource = remember { MutableInteractionSource() }
-                            val isFolderHovered by folderInteractionSource.collectIsHoveredAsState()
+                        val folderInteractionSource = remember { MutableInteractionSource() }
+                        val isFolderHovered by folderInteractionSource.collectIsHoveredAsState()
 
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(MaterialTheme.shapes.medium)
-                                    .clickable {
-                                        onFolderSelected(item)
-                                        //currentDir = item
-                                        coroutineScope.launch {
-                                            pathScrollState.animateScrollTo(pathScrollState.maxValue)
-                                        }
-                                    }
-                                    .padding(9.dp)
-                                    .animateItem(placementSpec = tween())
-                                    .hoverable(folderInteractionSource),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically){
-                                    Icon(
-                                        painter = painterResource(Res.drawable.folder),
-                                        contentDescription = null,
-                                        tint = colors.folderIconColor,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = item.name,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = colors.folderNameColor,
-                                        softWrap = allowSoftWrapFolderName
-                                    )
-                                }
-                                AnimatedVisibility(
-                                    visible = isFolderHovered,
-                                    enter = scaleIn(),
-                                    exit = scaleOut()
-                                ){
-                                    IconButton(onClick = {onShowFileInfo(item)}, modifier = Modifier.size(20.dp)){
-                                        Icon(
-                                            Icons.Default.Info,
-                                            contentDescription = "Folder info",
-                                            modifier = Modifier.size(20.dp),
-                                            tint = colors.infoIconTint
-                                        )
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.medium)
+                                .clickable {
+                                    onFolderSelected(item)
+                                    coroutineScope.launch {
+                                        pathScrollState.animateScrollTo(pathScrollState.maxValue)
                                     }
                                 }
+                                .padding(9.dp)
+                                .animateItem(placementSpec = tween())
+                                .hoverable(folderInteractionSource),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically){
+                                Icon(
+                                    painter = painterResource(Res.drawable.folder),
+                                    contentDescription = null,
+                                    tint = colors.folderIconColor,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = item.name,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = colors.folderNameColor,
+                                    softWrap = allowSoftWrapFolderName
+                                )
                             }
-                        } else {
-                            val fileInteractionSource = remember { MutableInteractionSource() }
-                            val isFileHovered by fileInteractionSource.collectIsHoveredAsState()
-
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(MaterialTheme.shapes.medium)
-                                    .clickable { onFileClicked() }
-                                    .padding(9.dp)
-                                    .animateItem(placementSpec = tween())
-                                    .hoverable(fileInteractionSource),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically){
+                            AnimatedVisibility(
+                                visible = isFolderHovered,
+                                enter = scaleIn(),
+                                exit = scaleOut()
+                            ){
+                                IconButton(onClick = {onShowFileInfo(item)}, modifier = Modifier.size(20.dp)){
                                     Icon(
-                                        painter = getFileIcon(item),
-                                        contentDescription = null,
-                                        tint = colors.fileIconColor, // Dimmed to indicate non-selectability
-                                        modifier = Modifier.size(22.dp)
+                                        Icons.Default.Info,
+                                        contentDescription = "Folder info",
+                                        modifier = Modifier.size(20.dp),
+                                        tint = colors.infoIconTint
                                     )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = item.name,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = colors.fileNameColor, // Dimmed text
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        softWrap = allowSoftWrapFileName
-                                    )
-                                }
-                                AnimatedVisibility(
-                                    visible = isFileHovered,
-                                    enter = scaleIn(),
-                                    exit = scaleOut()
-                                ){
-                                    IconButton(onClick = {onShowFileInfo(item)}, modifier = Modifier.size(20.dp)){
-                                        Icon(
-                                            Icons.Default.Info,
-                                            contentDescription = "File info",
-                                            modifier = Modifier.size(20.dp),
-                                            tint = colors.infoIconTint
-                                        )
-                                    }
                                 }
                             }
                         }
