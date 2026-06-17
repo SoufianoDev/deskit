@@ -33,6 +33,8 @@ import deskit.dialogs.defaults.FolderChooserColors
 import deskit.dialogs.defaults.FolderChooserDefaults
 import deskit.dialogs.info.InfoDialog
 import deskit.utils.FileInfoDialog
+import deskit.utils.NewFolderOverlayDialog
+import deskit.utils.SearchBarSection
 import java.awt.Dimension
 import java.io.File
 
@@ -49,7 +51,7 @@ import java.io.File
  *                       Defaults to the user's Downloads folder.
  * @param onFolderSelected Callback function invoked with the selected [File] (directory) when
  *                         the user clicks the "Choose" button.
- * @param isFileInfoDialogResizable Whether the file info dialog can be resized. Defaults to `true`.
+
  * @param colors The colors to be used for the folder chooser dialog. See [FolderChooserColors] for more details.
  * @param allowSoftWrapFolderName Whether to allow soft wrapping for folder names if they are too long. Defaults to `false`.
  * @param allowSoftWrapFileName Whether to allow soft wrapping for file names if they are too long. Defaults to `false`.
@@ -62,14 +64,16 @@ fun FolderChooserDialog(
     title: String = "Choose Folder",
     startDirectory: File = File(System.getProperty("user.home") + "/Downloads"),
     onFolderSelected: (File) -> Unit,
-    isFileInfoDialogResizable: Boolean = true,
-    colors: FolderChooserColors = FolderChooserDefaults.colors(),
+    colors: FolderChooserColors? = null,
+    colorScheme: ColorScheme? = null,
     allowSoftWrapFolderName: Boolean = false,
     allowSoftWrapFileName: Boolean = false,
     onCancel: () -> Unit
 ) {
+    val resolvedColorScheme = colorScheme ?: MaterialTheme.colorScheme
     var currentDir by remember { mutableStateOf(startDirectory) }
     var showFileNotAllowedDialog by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
     var selectedFileForInfo by remember { mutableStateOf<File?>(null) }
 
@@ -80,23 +84,22 @@ fun FolderChooserDialog(
             ?: emptyList()
     }
 
+    val filteredItems = remember(items, searchQuery) {
+        if (searchQuery.isBlank()) items
+        else items.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    }
+
     val pathSegments = generateSequence(currentDir) { it.parentFile }
         .toList()
         .asReversed()
 
     var isListView by remember { mutableStateOf(true) }
+    var creatingNewFolder by remember { mutableStateOf(false) }
+    var newFolderName by remember { mutableStateOf("") }
 
     val dialogState = rememberDialogState(size = DpSize(600.dp, 600.dp), position = WindowPosition(Alignment.Center))
 
     val pathScrollState = rememberScrollState()
-
-    selectedFileForInfo?.let { file ->
-        FileInfoDialog(
-            file = file,
-            onClose = { selectedFileForInfo = null },
-            resizable = isFileInfoDialogResizable
-        )
-    }
 
     DialogWindow(
         title = title,
@@ -104,27 +107,41 @@ fun FolderChooserDialog(
         onCloseRequest = onCancel
     ) {
         window.minimumSize = Dimension(600, 600)
-        Surface {
-            Column(Modifier.padding(16.dp)) {
-                Text("Select a Folder", style = MaterialTheme.typography.titleLarge)
+        MaterialTheme(colorScheme = resolvedColorScheme) {
+            val resolvedColors = colors ?: FolderChooserDefaults.colors()
+            Surface(modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(Modifier.padding(16.dp)) {
+                    Text("Select a Folder", style = MaterialTheme.typography.titleLarge)
 
                 Spacer(Modifier.height(8.dp))
 
                 PathSegmentsSection(
                     pathScrollState = pathScrollState,
                     pathSegments = pathSegments,
-                    onFolderSelected = { currentDir = it }
+                    onFolderSelected = { currentDir = it; searchQuery = "" }
                 )
+
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopStart) {
+                    SearchBarSection(
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = { searchQuery = it },
+                        placeholderText = "Search folders..."
+                    )
+                }
+
+                Spacer(Modifier.height(8.dp))
 
                 BackButtonSection(
                     coroutineScope = coroutineScope,
                     pathScrollState = pathScrollState,
-                    onBackClicked = { currentDir = it },
+                    onBackClicked = { currentDir = it; searchQuery = "" },
                     currentDir = currentDir,
                     isListView = isListView,
                     onListGridViewChange = {
                         isListView = !isListView
-                    }
+                    },
+                    onNewFolderClicked = { creatingNewFolder = true }
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -132,14 +149,14 @@ fun FolderChooserDialog(
                 FilesAndFoldersListSection(
                     coroutineScope = coroutineScope,
                     pathScrollState = pathScrollState,
-                    items = items,
+                    items = filteredItems,
                     onFileClicked = { showFileNotAllowedDialog = true },
-                    onFolderSelected = { currentDir = it },
+                    onFolderSelected = { currentDir = it; searchQuery = "" },
                     onShowFileInfo = { file ->
                         selectedFileForInfo = file
                     },
                     modifier = Modifier.weight(1f),
-                    colors = colors,
+                    colors = resolvedColors,
                     isListView = isListView,
                     allowSoftWrapFolderName = allowSoftWrapFolderName,
                     allowSoftWrapFileName = allowSoftWrapFileName
@@ -147,22 +164,52 @@ fun FolderChooserDialog(
 
                 Spacer(Modifier.height(8.dp))
 
-                Row(Modifier.align(Alignment.End)) {
-                    TextButton(onClick = onCancel, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
-                        Text("Cancel", color = MaterialTheme.colorScheme.error)
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = { onFolderSelected(currentDir) },
-                        shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
-                    ) {
-                        Text("Choose")
+                    Row(Modifier.align(Alignment.End)) {
+                        TextButton(onClick = onCancel, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
+                            Text("Cancel", color = MaterialTheme.colorScheme.error)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = { onFolderSelected(currentDir) },
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
+                        ) {
+                            Text("Choose")
+                        }
                     }
                 }
+
+                selectedFileForInfo?.let { file ->
+                    FileInfoDialog(
+                        file = file,
+                        onClose = { selectedFileForInfo = null }
+                    )
+                }
+
+                NewFolderOverlayDialog(
+                    visible = creatingNewFolder,
+                    folderName = newFolderName,
+                    onFolderNameChanged = { newFolderName = it },
+                    onCancel = {
+                        creatingNewFolder = false
+                        newFolderName = ""
+                    },
+                    onCreateFolder = {
+                        val newFolder = File(currentDir, newFolderName)
+                        if (!newFolder.exists()) {
+                            newFolder.mkdir()
+                            currentDir = newFolder
+                            searchQuery = ""
+                        }
+                        creatingNewFolder = false
+                        newFolderName = ""
+                    }
+                )
+            }
             }
         }
     }
+
     if (showFileNotAllowedDialog) {
         InfoDialog(
             title = "Cannot Select Files",

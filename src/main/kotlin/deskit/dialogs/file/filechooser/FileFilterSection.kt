@@ -76,7 +76,12 @@ internal fun FileFilterSection(
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                 ) {
-                                    append(allowedExtensions.joinToString(", ") { ".$it" })
+                                    val isAllMode = allowedExtensions.any { it.equals("all", ignoreCase = true) }
+                                    if (isAllMode) {
+                                        append("All files")
+                                    } else {
+                                        append(allowedExtensions.joinToString(", ") { ".$it" })
+                                    }
                                 }
                             },
                             style = MaterialTheme.typography.bodySmall

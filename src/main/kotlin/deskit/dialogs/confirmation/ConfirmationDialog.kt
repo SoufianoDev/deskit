@@ -72,7 +72,8 @@ fun ConfirmationDialog(
     message: String = "Please confirm to proceed",
     icon: Painter? = null,
     iconSize: DpSize = DpSize(64.dp, 64.dp),
-    colors: ConfirmationDialogColors = ConfirmationDialogDefaults.colors(),
+    colors: ConfirmationDialogColors? = null,
+    colorScheme: ColorScheme? = null,
     confirmButtonText: String = "OK",
     cancelButtonText: String = "Cancel",
     onConfirm: () -> Unit,
@@ -87,8 +88,7 @@ fun ConfirmationDialog(
         )
     }
 ) {
-//    val dialogWidth = if (icon != null) 500.dp else 450.dp
-//    val dialogHeight = if (icon != null) 280.dp else 230.dp
+    val resolvedColorScheme = colorScheme ?: MaterialTheme.colorScheme
 
     val dialogWidth = width
     val dialogHeight = height
@@ -110,8 +110,10 @@ fun ConfirmationDialog(
         }else{
             window.minimumSize = null
         }
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(
+        MaterialTheme(colorScheme = resolvedColorScheme) {
+            val resolvedColors = colors ?: ConfirmationDialogDefaults.colors()
+            Surface(modifier = Modifier.fillMaxSize()) {
+                Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(24.dp),
@@ -123,7 +125,7 @@ fun ConfirmationDialog(
                     Icon(
                         painter = icon,
                         contentDescription = null,
-                        tint = colors.iconTint,
+                        tint = resolvedColors.iconTint,
                         modifier = Modifier.size(iconSize.width, iconSize.height)
                     )
                     Spacer(Modifier.height(16.dp))
@@ -146,8 +148,8 @@ fun ConfirmationDialog(
                         onClick = onCancel,
                         shape = MaterialTheme.shapes.medium,
                         colors = ButtonDefaults.textButtonColors(
-                            containerColor = colors.cancelButtonColor,
-                            contentColor = colors.cancelButtonTextColor
+                            containerColor = resolvedColors.cancelButtonColor,
+                            contentColor = resolvedColors.cancelButtonTextColor
                         ),
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
                     ) {
@@ -157,13 +159,14 @@ fun ConfirmationDialog(
                         onClick = onConfirm,
                         shape = MaterialTheme.shapes.medium,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.confirmButtonColor,
-                            contentColor = colors.confirmButtonTextColor
+                            containerColor = resolvedColors.confirmButtonColor,
+                            contentColor = resolvedColors.confirmButtonTextColor
                         ),
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
                     ) {
                         Text(confirmButtonText)
                     }
+                }
                 }
             }
         }

@@ -1,18 +1,3 @@
-/*
-Copyright 2025 Zahid Khalilov
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 package deskit.dialogs.file.filesaver
 
 import androidx.compose.foundation.layout.*
@@ -32,6 +17,8 @@ import deskit.dialogs.defaults.FileSaverColors
 import deskit.dialogs.defaults.FileSaverDefaults
 import deskit.dialogs.info.InfoDialog
 import deskit.utils.FileInfoDialog
+import deskit.utils.NewFolderOverlayDialog
+import deskit.utils.SearchBarSection
 import kotlinx.coroutines.launch
 import java.awt.Dimension
 import java.io.File
@@ -47,7 +34,6 @@ import java.io.File
  * @param startDirectory Default directory to save a file.
  * @param suggestedFileName The initial filename to populate in the text field. Can be empty.
  * @param extension The file extension to append to the saved file (e.g., ".txt", ".pdf").
- * @param resizableFileInfoDialog Whether the file info dialog can be resized. Defaults to `true`.
  * @param allowSoftWrapFolderName Whether to allow soft wrapping for folder names if they are too long. Defaults to `false`.
  * @param allowSoftWrapFileName Whether to allow soft wrapping for file names if they are too long. Defaults to `false`.
  * @param colors The colors to be used for the folder chooser dialog. See [FileSaverColors] for more details.
@@ -62,17 +48,18 @@ fun FileSaverDialog(
     startDirectory: File = File(System.getProperty("user.home") + "/Downloads"),
     suggestedFileName: String = "",
     extension: String,
-    resizableFileInfoDialog: Boolean = true,
     allowSoftWrapFolderName: Boolean = false,
     allowSoftWrapFileName: Boolean = false,
-    colors: FileSaverColors = FileSaverDefaults.colors(),
+    colors: FileSaverColors? = null,
+    colorScheme: ColorScheme? = null,
     onSave: (File) -> Unit,
     onCancel: () -> Unit
 ) {
-    //val homeDir = remember { System.getProperty("user.home") }
+    val resolvedColorScheme = colorScheme ?: MaterialTheme.colorScheme
     var fileName by remember { mutableStateOf(suggestedFileName) }
     var showFileExistsDialog by remember { mutableStateOf(false) }
     var currentDir by remember { mutableStateOf(startDirectory) }
+    var searchQuery by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
     var selectedFileForInfo by remember { mutableStateOf<File?>(null) }
     var isListView by remember { mutableStateOf(true) }
@@ -91,19 +78,16 @@ fun FileSaverDialog(
             ?: emptyList()
     }
 
+    val filteredItems = remember(items, searchQuery) {
+        if (searchQuery.isBlank()) items
+        else items.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    }
+
     val dialogState = rememberDialogState(size = DpSize(600.dp, 600.dp), position = WindowPosition(Alignment.Center))
     val pathScrollState = rememberScrollState()
 
     LaunchedEffect(pathSegments) {
         pathScrollState.animateScrollTo(pathScrollState.maxValue)
-    }
-
-    selectedFileForInfo?.let { file ->
-        FileInfoDialog(
-            file = file,
-            onClose = { selectedFileForInfo = null },
-            resizable = resizableFileInfoDialog
-        )
     }
 
     DialogWindow(
@@ -113,119 +97,158 @@ fun FileSaverDialog(
     ) {
         window.minimumSize = Dimension(600, 600)
         window.undecoratedResizerThickness = 2.dp
-        Surface(
-            modifier = Modifier.fillMaxSize()
-        ){
-            Column(Modifier
-                .fillMaxSize()
-                .padding(16.dp)
+        MaterialTheme(colorScheme = resolvedColorScheme) {
+            val resolvedColors = colors ?: FileSaverDefaults.colors()
+            Surface(
+                modifier = Modifier.fillMaxSize()
             ) {
-                Text("Saving as", style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.height(8.dp))
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                    ) {
+                        Text("Saving as", style = MaterialTheme.typography.titleLarge)
+                        Spacer(Modifier.height(16.dp))
 
-                // Filename input field
-                FileNameInputSection(
-                    fileName = fileName,
-                    extension = extension,
-                    onFileNameChanged = { newValue ->
-                        fileName = if (newValue.endsWith(extension, ignoreCase = true)) {
-                            newValue.dropLast(extension.length)
-                        } else {
-                            newValue
+                        // Path segments with scrollbar
+                        PathSegmentsSection(
+                            pathScrollState = pathScrollState,
+                            pathSegments = pathSegments,
+                            onFolderSelected = { currentDir = it; searchQuery = "" }
+                        )
+
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopStart) {
+                            SearchBarSection(
+                                searchQuery = searchQuery,
+                                onSearchQueryChange = { searchQuery = it }
+                            )
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
+                        // Navigation row with Back button and New Folder button
+                        NavigationButtonsSection(
+                            coroutineScope = coroutineScope,
+                            pathScrollState = pathScrollState,
+                            currentDir = currentDir,
+                            onBackClicked = { currentDir = it; searchQuery = "" },
+                            onNewFolderClicked = { creatingNewFolder = true },
+                            isListView = isListView,
+                            onListGridViewChange = {isListView = !isListView}
+                        )
+
+
+
+                        // Files and folders list with scrollbar
+                        FilesAndFoldersListSection(
+                            items = filteredItems,
+                            onFolderClicked = {
+                                currentDir = it
+                                searchQuery = ""
+                                coroutineScope.launch {
+                                    pathScrollState.animateScrollTo(pathScrollState.maxValue)
+                                }
+                            },
+                            onShowFileInfo = {file ->
+                                selectedFileForInfo = file
+                            },
+                            isListView = isListView,
+                            allowSoftWrapFileName = allowSoftWrapFileName,
+                            allowSoftWrapFolderName = allowSoftWrapFolderName,
+                            colors = resolvedColors,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // Bottom Section: Input Field and Action Buttons Row
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                FileNameInputSection(
+                                    fileName = fileName,
+                                    extension = extension,
+                                    onFileNameChanged = { newValue ->
+                                        fileName = if (newValue.endsWith(extension, ignoreCase = true)) {
+                                            newValue.dropLast(extension.length)
+                                        } else {
+                                            newValue
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                
+                                Spacer(Modifier.width(16.dp))
+                                
+                                TextButton(onClick = onCancel, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
+                                    Text(
+                                        text = "Cancel",
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                Button(
+                                    onClick = {
+                                        val finalFileName = if (fileName.endsWith(extension, ignoreCase = true)) {
+                                            fileName
+                                        } else {
+                                            fileName + extension
+                                        }
+                                        val finalFile = File(currentDir, finalFileName)
+                                        if (finalFile.exists()) {
+                                            showFileExistsDialog = true
+                                        } else {
+                                            onSave(finalFile)
+                                        }
+                                    },
+                                    enabled = fileName.isNotBlank(),
+                                    shape = MaterialTheme.shapes.medium,
+                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
+                                ) {
+                                    Text("Save", style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                            
+                            Spacer(Modifier.height(4.dp))
+                            
+                            // Note text properly placed entirely below the actionable row
+                            Text(
+                                text = "Note: Extension $extension will be added automatically",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
-                )
 
-                Spacer(Modifier.height(8.dp))
-
-                // Path segments with scrollbar
-                PathSegmentsSection(
-                    pathScrollState = pathScrollState,
-                    pathSegments = pathSegments,
-                    onFolderSelected = { currentDir = it }
-                )
-
-                // Navigation row with Back button and New Folder button
-                NavigationButtonsSection(
-                    coroutineScope = coroutineScope,
-                    pathScrollState = pathScrollState,
-                    currentDir = currentDir,
-                    onBackClicked = { currentDir = it },
-                    onNewFolderClicked = { creatingNewFolder = true },
-                    isListView = isListView,
-                    onListGridViewChange = {isListView = !isListView}
-                )
-
-                // New folder creation UI
-                NewFolderCreationSection(
-                    visible = creatingNewFolder,
-                    folderName = newFolderName,
-                    onFolderNameChanged = { newFolderName = it },
-                    onCancel = { creatingNewFolder = false },
-                    onCreateFolder = {
-                        val newFolder = File(currentDir, newFolderName)
-                        if (!newFolder.exists()) {
-                            newFolder.mkdir()
-                            currentDir = newFolder
-                        }
-                        creatingNewFolder = false
-                        newFolderName = ""
-                    }
-                )
-
-                Spacer(Modifier.height(8.dp))
-
-                // Files and folders list with scrollbar
-                FilesAndFoldersListSection(
-                    items = items,
-                    onFolderClicked = {
-                        currentDir = it
-                        coroutineScope.launch {
-                            pathScrollState.animateScrollTo(pathScrollState.maxValue)
-                        }
-                    },
-                    onShowFileInfo = {file ->
-                        selectedFileForInfo = file
-                    },
-                    isListView = isListView,
-                    allowSoftWrapFileName = allowSoftWrapFileName,
-                    allowSoftWrapFolderName = allowSoftWrapFolderName,
-                    colors = colors,
-                    modifier = Modifier.weight(1f)
-                )
-
-                Spacer(Modifier.height(8.dp))
-
-                // Action buttons
-                Row(Modifier.align(Alignment.End)) {
-                    TextButton(onClick = onCancel, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
-                        Text(
-                            text = "Cancel",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium
+                    selectedFileForInfo?.let { file ->
+                        FileInfoDialog(
+                            file = file,
+                            onClose = { selectedFileForInfo = null }
                         )
                     }
-                    Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            val finalFileName = if (fileName.endsWith(extension, ignoreCase = true)) {
-                                fileName
-                            } else {
-                                fileName + extension
-                            }
-                            val finalFile = File(currentDir, finalFileName)
-                            if (finalFile.exists()) {
-                                showFileExistsDialog = true
-                            } else {
-                                onSave(finalFile)
-                            }
+
+                    NewFolderOverlayDialog(
+                        visible = creatingNewFolder,
+                        folderName = newFolderName,
+                        onFolderNameChanged = { newFolderName = it },
+                        onCancel = {
+                            creatingNewFolder = false
+                            newFolderName = ""
                         },
-                        enabled = fileName.isNotBlank(),
-                        shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
-                    ) {
-                        Text("Save", style = MaterialTheme.typography.bodyMedium)
-                    }
+                        onCreateFolder = {
+                            val newFolder = File(currentDir, newFolderName)
+                            if (!newFolder.exists()) {
+                                newFolder.mkdir()
+                                currentDir = newFolder
+                                searchQuery = ""
+                            }
+                            creatingNewFolder = false
+                            newFolderName = ""
+                        }
+                    )
                 }
             }
         }
@@ -249,20 +272,6 @@ fun FileSaverDialog(
 
 /**
  * A sample composable function demonstrating the usage of the [FileSaverDialog].
- *
- * This sample displays a button that, when clicked, shows a [FileSaverDialog].
- * The dialog is pre-configured with a title ("Save As"), a suggested filename ("newfile"),
- * and a file extension (".md").
- *
- * It also features a text field that updates to reflect the state of the dialog:
- * - "File saver dialog is shown" when the dialog is opened.
- * - "File was saved and dialog was closed" when a file is successfully saved.
- *   In this sample, upon saving, "# Kotlin is fun" is written to the chosen file.
- * - "File saver dialog was closed" when the dialog is cancelled.
- *
- * This serves as a practical example of how to integrate and manage the
- * [FileSaverDialog], including handling file saving and cancellation events,
- * within a Composable UI.
  */
 @Composable
 fun FileSaverDialogSample(){

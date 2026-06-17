@@ -1,21 +1,12 @@
-/*
-Copyright 2025 Zahid Khalilov
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 
 package deskit.dialogs.info
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,6 +25,8 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberDialogState
 import deskit.dialogs.defaults.InfoDialogColors
 import deskit.dialogs.defaults.InfoDialogDefaults
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.awt.Dimension
 
 /**
@@ -66,7 +59,8 @@ fun InfoDialog(
     title: String = "Information",
     message: String = "Information message",
     icon: Painter? = null,
-    colors: InfoDialogColors = InfoDialogDefaults.colors(),
+    colors: InfoDialogColors? = null,
+    colorScheme: ColorScheme? = null,
     iconSize: DpSize = DpSize(64.dp, 64.dp),
     onClose: () -> Unit,
     content: @Composable () -> Unit = {
@@ -78,6 +72,7 @@ fun InfoDialog(
         )
     }
 ) {
+    val resolvedColorScheme = colorScheme ?: MaterialTheme.colorScheme
     val dialogWidth = width
     val dialogHeight = height
 
@@ -86,11 +81,21 @@ fun InfoDialog(
         position = WindowPosition(Alignment.Center)
     )
 
+    var visible by remember { mutableStateOf(true) }
+    val coroutineScope = rememberCoroutineScope()
+
+    val handleClose: () -> Unit = {
+        visible = false
+        coroutineScope.launch {
+            delay(500)
+            onClose()
+        }
+    }
 
     DialogWindow(
         title = title,
         state = dialogState,
-        onCloseRequest = onClose,
+        onCloseRequest = handleClose,
         resizable = resizable,
         alwaysOnTop = true
     ) {
@@ -99,45 +104,56 @@ fun InfoDialog(
         }else{
             window.minimumSize = null
         }
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.SpaceBetween,
-                horizontalAlignment = Alignment.CenterHorizontally
+        MaterialTheme(colorScheme = resolvedColorScheme) {
+            val resolvedColors = colors ?: InfoDialogDefaults.colors()
+            AnimatedVisibility(
+                visible = visible,
+                enter = fadeIn(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)) +
+                        scaleIn(initialScale = 0.95f, animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)),
+                exit = fadeOut(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)) +
+                        scaleOut(targetScale = 0.95f, animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f))
             ) {
-                if (icon != null) {
-                    Spacer(Modifier.height(4.dp))
-
-                    Icon(
-                        painter = icon,
-                        contentDescription = null,
-                        tint = colors.iconTint,
-                        modifier = Modifier.size(iconSize.width, iconSize.height)
-                    )
-                    Spacer(Modifier.height(16.dp))
-                } else {
-                    Spacer(Modifier.height(8.dp))
-                }
-
-                Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.Center
+                Surface(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    content()
-                }
+                    if (icon != null) {
+                        Spacer(Modifier.height(4.dp))
 
-                Button(
-                    onClick = onClose,
+                        Icon(
+                            painter = icon,
+                            contentDescription = null,
+                            tint = resolvedColors.iconTint,
+                            modifier = Modifier.size(iconSize.width, iconSize.height)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                    } else {
+                        Spacer(Modifier.height(8.dp))
+                    }
+
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        content()
+                    }
+
+                    Button(
+                        onClick = handleClose,
                     modifier = Modifier.align(Alignment.End).pointerHoverIcon(PointerIcon.Hand),
                     shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.okButtonColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = resolvedColors.okButtonColor)
                 ) {
-                    Text("OK", color = colors.okButtonTextColor)
+                    Text("OK", color = resolvedColors.okButtonTextColor)
                 }
             }
+            }
         }
+    }
     }
 }
 

@@ -19,6 +19,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowCircleLeft
+import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,7 +43,8 @@ internal fun BackButtonSection(
     onBackClicked: (File) -> Unit,
     currentDir: File,
     isListView: Boolean = true,
-    onListGridViewChange: () -> Unit = {}
+    onListGridViewChange: () -> Unit = {},
+    onNewFolderClicked: () -> Unit = {}
 ){
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -77,6 +79,11 @@ internal fun BackButtonSection(
             Text("Current Directory", style = MaterialTheme.typography.labelLarge)
         }
 
-        LayoutViewToggle(isListView, onListGridViewChange)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onNewFolderClicked, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
+                Icon(Icons.Default.CreateNewFolder, contentDescription = "New Folder")
+            }
+            LayoutViewToggle(isListView, onListGridViewChange)
+        }
     }
 }

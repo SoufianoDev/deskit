@@ -38,3 +38,4 @@ compose.resources{
     packageOfResClass = "deskit.resources"
     generateResClass = auto
 }
+

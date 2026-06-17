@@ -14,4 +14,4 @@ pluginManagement {
 }
 
 rootProject.name = "deskit"
-include("preview")
+include(":demo")

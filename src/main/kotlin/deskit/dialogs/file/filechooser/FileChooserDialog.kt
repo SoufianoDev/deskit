@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowCircleLeft
+import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,6 +38,8 @@ import deskit.dialogs.defaults.FileChooserColors
 import deskit.dialogs.defaults.FileChooserDefaults
 import deskit.utils.FileInfoDialog
 import deskit.utils.LayoutViewToggle
+import deskit.utils.NewFolderOverlayDialog
+import deskit.utils.SearchBarSection
 import kotlinx.coroutines.launch
 import java.awt.Dimension
 import java.io.File
@@ -53,7 +56,7 @@ import java.io.File
  * @param allowedExtensions Optional list of file extensions to filter by (e.g., ["txt", "pdf"]).
  *                          If null, all files are shown. Extensions are case-insensitive.
  * @param colors The colors to be used for the folder chooser dialog. See [FileChooserColors] for more details.
- * @param resizableFileInfoDialog Whether the file info dialog can be resized. Defaults to `true`.
+
  * @param allowSoftWrapFolderName Whether to allow soft wrapping for folder names if they are too long. Defaults to `false`.
  * @param allowSoftWrapFileName Whether to allow soft wrapping for file names if they are too long. Defaults to `false`.
  * @param onFileSelected Callback function invoked with the selected File when the user clicks a file.
@@ -67,25 +70,34 @@ fun FileChooserDialog(
     title: String = "Choose File",
     startDirectory: File = File(System.getProperty("user.home") + "/Downloads"),
     allowedExtensions: List<String>? = null,
-    colors: FileChooserColors = FileChooserDefaults.colors(),
-    resizableFileInfoDialog: Boolean = true,
+    colors: FileChooserColors? = null,
+    colorScheme: ColorScheme? = null,
     allowSoftWrapFolderName: Boolean = false,
     allowSoftWrapFileName: Boolean = false,
     onFileSelected: (File) -> Unit,
     onCancel: () -> Unit
 ) {
+    val resolvedColorScheme = colorScheme ?: MaterialTheme.colorScheme
     val coroutineScope = rememberCoroutineScope()
     var currentDir by remember { mutableStateOf(startDirectory) }
+    var searchQuery by remember { mutableStateOf("") }
+    val showAll = allowedExtensions?.any { it.equals("all", ignoreCase = true) } == true
+
     val files = remember(currentDir) {
         currentDir.listFiles()
             ?.filter {
                 !it.name.startsWith(".") &&
-                        (it.isDirectory || allowedExtensions == null || allowedExtensions.any {
+                        (it.isDirectory || allowedExtensions == null || showAll || allowedExtensions.any {
                                 ext -> it.name.endsWith(ext, ignoreCase = true)
                         })
             }
             ?.sortedWith(compareBy({ !it.isDirectory }, { it.name }))
             ?: emptyList()
+    }
+
+    val filteredFiles = remember(files, searchQuery) {
+        if (searchQuery.isBlank()) files
+        else files.filter { it.name.contains(searchQuery, ignoreCase = true) }
     }
 
     var selectedFileForInfo by remember { mutableStateOf<File?>(null) }
@@ -95,20 +107,14 @@ fun FileChooserDialog(
         .asReversed()
 
     var isListView by remember { mutableStateOf(true) }
+    var creatingNewFolder by remember { mutableStateOf(false) }
+    var newFolderName by remember { mutableStateOf("") }
 
     val dialogState = rememberDialogState(size = DpSize(600.dp, 600.dp), position = WindowPosition(Alignment.Center))
     val pathScrollState = rememberScrollState()
 
     LaunchedEffect(pathSegments) {
         pathScrollState.animateScrollTo(pathScrollState.maxValue)
-    }
-
-    selectedFileForInfo?.let { file ->
-        FileInfoDialog(
-            file = file,
-            onClose = { selectedFileForInfo = null },
-            resizable = resizableFileInfoDialog
-        )
     }
 
     DialogWindow(
@@ -119,10 +125,13 @@ fun FileChooserDialog(
         window.minimumSize = Dimension(600, 600)
         window.undecoratedResizerThickness = 2.dp
 
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(Modifier.padding(16.dp)) {
+        MaterialTheme(colorScheme = resolvedColorScheme) {
+            val resolvedColors = colors ?: FileChooserDefaults.colors()
+            Surface(modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(Modifier.padding(16.dp)) {
 
-                FileFilterSection(
+                    FileFilterSection(
                     allowedExtensions = allowedExtensions
                 )
 
@@ -130,9 +139,20 @@ fun FileChooserDialog(
 
                 PathSegments(
                     pathSegments = pathSegments,
-                    onPathSelected = { currentDir = it },
+                    onPathSelected = { currentDir = it; searchQuery = "" },
                     scrollState = pathScrollState
                 )
+
+                Spacer(Modifier.height(8.dp))
+
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopStart) {
+                    SearchBarSection(
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = { searchQuery = it }
+                    )
+                }
+
+                Spacer(Modifier.height(8.dp))
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -145,6 +165,7 @@ fun FileChooserDialog(
                                 onClick = {
                                     currentDir.parentFile?.let { parent ->
                                         currentDir = parent
+                                        searchQuery = ""
                                     }
                                 },
                                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
@@ -158,16 +179,22 @@ fun FileChooserDialog(
                         Spacer(Modifier.width(3.dp))
                         Text("Current Directory", style = MaterialTheme.typography.labelLarge)
                     }
-                    LayoutViewToggle(isListView, onListGridViewChange = {isListView = !isListView})
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { creatingNewFolder = true }, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
+                            Icon(Icons.Default.CreateNewFolder, contentDescription = "New Folder")
+                        }
+                        LayoutViewToggle(isListView, onListGridViewChange = {isListView = !isListView})
+                    }
                 }
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(4.dp))
 
                 FileAndFolderSection(
-                    files = files,
+                    files = filteredFiles,
                     allowedExtensions = allowedExtensions,
                     onDirectorySelected = {
                         currentDir = it
+                        searchQuery = ""
                         coroutineScope.launch {
                             pathScrollState.animateScrollTo(pathScrollState.maxValue)
                         }
@@ -175,7 +202,7 @@ fun FileChooserDialog(
                     onShowFileInfo = { file ->
                         selectedFileForInfo = file
                     },
-                    colors = colors,
+                    colors = resolvedColors,
                     onFileSelected = onFileSelected,
                     modifier = Modifier.weight(1f),
                     isListView = isListView,
@@ -186,46 +213,61 @@ fun FileChooserDialog(
 
                 Spacer(Modifier.height(8.dp))
 
-                Row(Modifier.align(Alignment.End)) {
-                    TextButton(onClick = onCancel, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
-                        Text("Cancel", color = MaterialTheme.colorScheme.error)
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            val selectedFile = currentDir.listFiles()?.firstOrNull { !it.isDirectory }
-                            if (selectedFile != null) {
-                                onFileSelected(selectedFile)
-                            }
-                        },
-                        enabled = files.any { !it.isDirectory },
-                        shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
-                    ) {
-                        Text("Select")
+                    Row(Modifier.align(Alignment.End)) {
+                        TextButton(onClick = onCancel, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
+                            Text("Cancel", color = MaterialTheme.colorScheme.error)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                val selectedFile = currentDir.listFiles()?.firstOrNull { !it.isDirectory }
+                                if (selectedFile != null) {
+                                    onFileSelected(selectedFile)
+                                }
+                            },
+                            enabled = files.any { !it.isDirectory },
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
+                        ) {
+                            Text("Select")
+                        }
                     }
                 }
+
+                selectedFileForInfo?.let { file ->
+                    FileInfoDialog(
+                        file = file,
+                        onClose = { selectedFileForInfo = null }
+                    )
+                }
+
+                NewFolderOverlayDialog(
+                    visible = creatingNewFolder,
+                    folderName = newFolderName,
+                    onFolderNameChanged = { newFolderName = it },
+                    onCancel = {
+                        creatingNewFolder = false
+                        newFolderName = ""
+                    },
+                    onCreateFolder = {
+                        val newFolder = File(currentDir, newFolderName)
+                        if (!newFolder.exists()) {
+                            newFolder.mkdir()
+                            currentDir = newFolder
+                            searchQuery = ""
+                        }
+                        creatingNewFolder = false
+                        newFolderName = ""
+                    }
+                )
+            }
             }
         }
     }
 }
 
-
 /**
  * A sample composable function demonstrating the usage of the [FileChooserDialog].
- *
- * This sample displays a button that, when clicked, shows a [FileChooserDialog].
- * The dialog is pre-configured with a title ("Open File") and a list of allowed
- * file extensions (e.g., "txt", "md", "png").
- *
- * It also features a simple text that updates to reflect the state of the dialog:
- * - "File chooser dialog is shown" when the dialog is opened.
- * - "Selected file: [path_to_file]" when a file is successfully selected.
- * - "File chooser dialog was closed" when the dialog is cancelled.
- *
- * This serves as a practical example of how to integrate and manage the
- * [FileChooserDialog], including handling file selection and cancellation events,
- * within a Composable UI.
  */
 @Composable
 fun FileChooserDialogSample(){
