@@ -95,7 +95,7 @@ fun FolderChooserDialog(
     var creatingNewFolder by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
 
-    val dialogState = rememberDialogState(size = DpSize(600.dp, 600.dp), position = WindowPosition(Alignment.Center))
+    val dialogState = rememberDialogState(position = WindowPosition(Alignment.Center))
 
     val pathScrollState = rememberScrollState()
 
@@ -104,7 +104,8 @@ fun FolderChooserDialog(
         state = dialogState,
         onCloseRequest = onCancel
     ) {
-        window.minimumSize = Dimension(600, 600)
+        window.minimumSize = Dimension(660, 600)
+        window.maximumSize = Dimension(900, 600)
         val nav = remember { MouseNavDispatcher() }
         nav.onNavigate = { dir -> currentDir = dir; searchQuery = "" }
         nav.currentSupplier = { currentDir }
