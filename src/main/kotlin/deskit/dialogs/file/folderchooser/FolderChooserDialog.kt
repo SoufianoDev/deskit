@@ -33,6 +33,7 @@ import deskit.dialogs.defaults.FolderChooserColors
 import deskit.dialogs.defaults.FolderChooserDefaults
 import deskit.utils.FileInfoDialog
 import deskit.utils.NewFolderOverlayDialog
+import deskit.utils.MouseNavDispatcher
 import deskit.utils.SearchBarSection
 import java.awt.Dimension
 import java.io.File
@@ -69,6 +70,7 @@ fun FolderChooserDialog(
 ) {
     val resolvedColorScheme = colorScheme ?: MaterialTheme.colorScheme
     var currentDir by remember { mutableStateOf(startDirectory) }
+
     var searchQuery by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
     var selectedFileForInfo by remember { mutableStateOf<File?>(null) }
@@ -103,6 +105,14 @@ fun FolderChooserDialog(
         onCloseRequest = onCancel
     ) {
         window.minimumSize = Dimension(600, 600)
+        val nav = remember { MouseNavDispatcher() }
+        nav.onNavigate = { dir -> currentDir = dir; searchQuery = "" }
+        nav.currentSupplier = { currentDir }
+
+        DisposableEffect(Unit) {
+            nav.installOn(window)
+            onDispose { nav.uninstallFrom(window) }
+        }
         MaterialTheme(colorScheme = resolvedColorScheme) {
             val resolvedColors = colors ?: FolderChooserDefaults.colors()
             Surface(modifier = Modifier.fillMaxSize()) {
@@ -115,7 +125,7 @@ fun FolderChooserDialog(
                 PathSegmentsSection(
                     pathScrollState = pathScrollState,
                     pathSegments = pathSegments,
-                    onFolderSelected = { currentDir = it; searchQuery = "" }
+                    onFolderSelected = { nav.navigateTo(it) }
                 )
 
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopStart) {
@@ -131,7 +141,7 @@ fun FolderChooserDialog(
                 BackButtonSection(
                     coroutineScope = coroutineScope,
                     pathScrollState = pathScrollState,
-                    onBackClicked = { currentDir = it; searchQuery = "" },
+                    onBackClicked = { nav.navigateTo(it) },
                     currentDir = currentDir,
                     isListView = isListView,
                     onListGridViewChange = {
@@ -146,7 +156,7 @@ fun FolderChooserDialog(
                     coroutineScope = coroutineScope,
                     pathScrollState = pathScrollState,
                     items = filteredItems,
-                    onFolderSelected = { currentDir = it; searchQuery = "" },
+                    onFolderSelected = { nav.navigateTo(it) },
                     onShowFileInfo = { file ->
                         selectedFileForInfo = file
                     },
@@ -192,8 +202,7 @@ fun FolderChooserDialog(
                         val newFolder = File(currentDir, newFolderName)
                         if (!newFolder.exists()) {
                             newFolder.mkdir()
-                            currentDir = newFolder
-                            searchQuery = ""
+                            nav.navigateTo(newFolder)
                         }
                         creatingNewFolder = false
                         newFolderName = ""

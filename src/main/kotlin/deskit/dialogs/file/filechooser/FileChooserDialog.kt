@@ -36,6 +36,7 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberDialogState
 import deskit.dialogs.defaults.FileChooserColors
 import deskit.dialogs.defaults.FileChooserDefaults
+import deskit.utils.MouseNavDispatcher
 import deskit.utils.FileInfoDialog
 import deskit.utils.LayoutViewToggle
 import deskit.utils.NewFolderOverlayDialog
@@ -80,6 +81,7 @@ fun FileChooserDialog(
     val resolvedColorScheme = colorScheme ?: MaterialTheme.colorScheme
     val coroutineScope = rememberCoroutineScope()
     var currentDir by remember { mutableStateOf(startDirectory) }
+
     var searchQuery by remember { mutableStateOf("") }
     val showAll = allowedExtensions?.any { it.equals("all", ignoreCase = true) } == true
 
@@ -124,6 +126,14 @@ fun FileChooserDialog(
     ) {
         window.minimumSize = Dimension(600, 600)
         window.undecoratedResizerThickness = 2.dp
+        val nav = remember { MouseNavDispatcher() }
+        nav.onNavigate = { dir -> currentDir = dir; searchQuery = "" }
+        nav.currentSupplier = { currentDir }
+
+        DisposableEffect(Unit) {
+            nav.installOn(window)
+            onDispose { nav.uninstallFrom(window) }
+        }
 
         MaterialTheme(colorScheme = resolvedColorScheme) {
             val resolvedColors = colors ?: FileChooserDefaults.colors()
@@ -139,7 +149,7 @@ fun FileChooserDialog(
 
                 PathSegments(
                     pathSegments = pathSegments,
-                    onPathSelected = { currentDir = it; searchQuery = "" },
+                    onPathSelected = { nav.navigateTo(it) },
                     scrollState = pathScrollState
                 )
 
@@ -164,8 +174,7 @@ fun FileChooserDialog(
                             IconButton(
                                 onClick = {
                                     currentDir.parentFile?.let { parent ->
-                                        currentDir = parent
-                                        searchQuery = ""
+                                        nav.navigateTo(parent)
                                     }
                                 },
                                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
@@ -193,8 +202,7 @@ fun FileChooserDialog(
                     files = filteredFiles,
                     allowedExtensions = allowedExtensions,
                     onDirectorySelected = {
-                        currentDir = it
-                        searchQuery = ""
+                        nav.navigateTo(it)
                         coroutineScope.launch {
                             pathScrollState.animateScrollTo(pathScrollState.maxValue)
                         }
@@ -253,8 +261,7 @@ fun FileChooserDialog(
                         val newFolder = File(currentDir, newFolderName)
                         if (!newFolder.exists()) {
                             newFolder.mkdir()
-                            currentDir = newFolder
-                            searchQuery = ""
+                            nav.navigateTo(newFolder)
                         }
                         creatingNewFolder = false
                         newFolderName = ""

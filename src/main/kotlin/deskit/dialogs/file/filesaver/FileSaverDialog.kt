@@ -17,6 +17,7 @@ import deskit.dialogs.defaults.FileSaverColors
 import deskit.dialogs.defaults.FileSaverDefaults
 import deskit.dialogs.info.InfoDialog
 import deskit.utils.FileInfoDialog
+import deskit.utils.MouseNavDispatcher
 import deskit.utils.NewFolderOverlayDialog
 import deskit.utils.SearchBarSection
 import kotlinx.coroutines.launch
@@ -59,6 +60,7 @@ fun FileSaverDialog(
     var fileName by remember { mutableStateOf(suggestedFileName) }
     var showFileExistsDialog by remember { mutableStateOf(false) }
     var currentDir by remember { mutableStateOf(startDirectory) }
+
     var searchQuery by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
     var selectedFileForInfo by remember { mutableStateOf<File?>(null) }
@@ -97,11 +99,17 @@ fun FileSaverDialog(
     ) {
         window.minimumSize = Dimension(600, 600)
         window.undecoratedResizerThickness = 2.dp
+        val nav = remember { MouseNavDispatcher() }
+        nav.onNavigate = { dir -> currentDir = dir; searchQuery = "" }
+        nav.currentSupplier = { currentDir }
+
+        DisposableEffect(Unit) {
+            nav.installOn(window)
+            onDispose { nav.uninstallFrom(window) }
+        }
         MaterialTheme(colorScheme = resolvedColorScheme) {
             val resolvedColors = colors ?: FileSaverDefaults.colors()
-            Surface(
-                modifier = Modifier.fillMaxSize()
-            ) {
+            Surface(modifier = Modifier.fillMaxSize()) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Column(Modifier
                         .fillMaxSize()
@@ -114,7 +122,7 @@ fun FileSaverDialog(
                         PathSegmentsSection(
                             pathScrollState = pathScrollState,
                             pathSegments = pathSegments,
-                            onFolderSelected = { currentDir = it; searchQuery = "" }
+                            onFolderSelected = { nav.navigateTo(it) }
                         )
 
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopStart) {
@@ -131,7 +139,7 @@ fun FileSaverDialog(
                             coroutineScope = coroutineScope,
                             pathScrollState = pathScrollState,
                             currentDir = currentDir,
-                            onBackClicked = { currentDir = it; searchQuery = "" },
+                            onBackClicked = { nav.navigateTo(it) },
                             onNewFolderClicked = { creatingNewFolder = true },
                             isListView = isListView,
                             onListGridViewChange = {isListView = !isListView}
@@ -143,8 +151,7 @@ fun FileSaverDialog(
                         FilesAndFoldersListSection(
                             items = filteredItems,
                             onFolderClicked = {
-                                currentDir = it
-                                searchQuery = ""
+                                nav.navigateTo(it)
                                 coroutineScope.launch {
                                     pathScrollState.animateScrollTo(pathScrollState.maxValue)
                                 }
@@ -242,8 +249,7 @@ fun FileSaverDialog(
                             val newFolder = File(currentDir, newFolderName)
                             if (!newFolder.exists()) {
                                 newFolder.mkdir()
-                                currentDir = newFolder
-                                searchQuery = ""
+                                nav.navigateTo(newFolder)
                             }
                             creatingNewFolder = false
                             newFolderName = ""

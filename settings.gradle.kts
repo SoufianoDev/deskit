@@ -15,3 +15,5 @@ pluginManagement {
 
 rootProject.name = "deskit"
 include(":demo")
+include(":mouse-test")
+project(":mouse-test").projectDir = file("tests/mouse-test")
