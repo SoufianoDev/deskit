@@ -35,7 +35,9 @@ class MouseNavDispatcher {
     }
 
     fun navigateTo(dir: File) {
-        currentSupplier?.invoke()?.let { backStack.addLast(it) }
+        val current = currentSupplier?.invoke()
+        if (current?.absolutePath == dir.absolutePath) return
+        current?.let { backStack.addLast(it) }
         forwardStack.clear()
         onNavigate?.invoke(dir)
     }

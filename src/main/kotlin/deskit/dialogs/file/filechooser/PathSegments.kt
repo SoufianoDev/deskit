@@ -32,6 +32,13 @@ import androidx.compose.ui.unit.dp
 import java.io.File
 
 
+@Deprecated(
+    message = "Use BreadcrumbPath from deskit.dialogs.file instead",
+    replaceWith = ReplaceWith(
+        "BreadcrumbPath(segments, onSegmentSelected)",
+        "deskit.dialogs.file.BreadcrumbPath"
+    )
+)
 @Composable
 internal fun PathSegments(
     pathSegments: List<File>,

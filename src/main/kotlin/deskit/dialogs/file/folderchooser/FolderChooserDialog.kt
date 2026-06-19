@@ -31,10 +31,14 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberDialogState
 import deskit.dialogs.defaults.FolderChooserColors
 import deskit.dialogs.defaults.FolderChooserDefaults
+import deskit.dialogs.file.BreadcrumbPath
 import deskit.utils.FileInfoDialog
 import deskit.utils.NewFolderOverlayDialog
 import deskit.utils.MouseNavDispatcher
 import deskit.utils.SearchBarSection
+import deskit.utils.path.PathDisplayMode
+import deskit.utils.path.PathResolver
+import kotlinx.coroutines.delay
 import java.awt.Dimension
 import java.io.File
 
@@ -61,6 +65,8 @@ import java.io.File
 fun FolderChooserDialog(
     title: String = "Choose Folder",
     startDirectory: File = File(System.getProperty("user.home") + "/Downloads"),
+    pathDisplayMode: PathDisplayMode = PathDisplayMode.LOGICAL_HOME,
+    allowSystemRootAccess: Boolean = false,
     onFolderSelected: (File) -> Unit,
     colors: FolderChooserColors? = null,
     colorScheme: ColorScheme? = null,
@@ -87,13 +93,20 @@ fun FolderChooserDialog(
         else items.filter { it.name.contains(searchQuery, ignoreCase = true) }
     }
 
-    val pathSegments = generateSequence(currentDir) { it.parentFile }
-        .toList()
-        .asReversed()
-
     var isListView by remember { mutableStateOf(true) }
     var creatingNewFolder by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
+    var systemAccessWarning by remember { mutableStateOf<String?>(null) }
+
+    val resolver = remember { PathResolver(pathDisplayMode, allowSystemRootAccess) }
+    val breadcrumbSegments = remember(currentDir) { resolver.resolve(currentDir) }
+
+    LaunchedEffect(systemAccessWarning) {
+        if (systemAccessWarning != null) {
+            delay(3000)
+            systemAccessWarning = null
+        }
+    }
 
     val dialogState = rememberDialogState(position = WindowPosition(Alignment.Center))
 
@@ -123,11 +136,28 @@ fun FolderChooserDialog(
 
                 Spacer(Modifier.height(8.dp))
 
-                PathSegmentsSection(
-                    pathScrollState = pathScrollState,
-                    pathSegments = pathSegments,
-                    onFolderSelected = { nav.navigateTo(it) }
+                BreadcrumbPath(
+                    segments = breadcrumbSegments,
+                    onSegmentSelected = { segment ->
+                        if (resolver.isAccessible(segment.file)) {
+                            nav.navigateTo(segment.file)
+                        } else {
+                            systemAccessWarning = "System folders are not accessible in Home mode."
+                        }
+                    },
+                    showHomeIcon = true,
+                    separator = if (pathDisplayMode == PathDisplayMode.RAW_SYSTEM) " ${File.separator} " else "\u203A",
+                    skipFirstSeparator = pathDisplayMode == PathDisplayMode.RAW_SYSTEM && File.separator == "/"
                 )
+
+                systemAccessWarning?.let { warning ->
+                    Text(
+                        text = warning,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
 
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopStart) {
                     SearchBarSection(

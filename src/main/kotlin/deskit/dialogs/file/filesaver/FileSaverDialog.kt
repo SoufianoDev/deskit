@@ -15,11 +15,15 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberDialogState
 import deskit.dialogs.defaults.FileSaverColors
 import deskit.dialogs.defaults.FileSaverDefaults
+import deskit.dialogs.file.BreadcrumbPath
 import deskit.dialogs.info.InfoDialog
 import deskit.utils.FileInfoDialog
 import deskit.utils.MouseNavDispatcher
 import deskit.utils.NewFolderOverlayDialog
 import deskit.utils.SearchBarSection
+import deskit.utils.path.PathDisplayMode
+import deskit.utils.path.PathResolver
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.awt.Dimension
 import java.io.File
@@ -49,6 +53,8 @@ fun FileSaverDialog(
     startDirectory: File = File(System.getProperty("user.home") + "/Downloads"),
     suggestedFileName: String = "",
     extension: String,
+    pathDisplayMode: PathDisplayMode = PathDisplayMode.LOGICAL_HOME,
+    allowSystemRootAccess: Boolean = false,
     allowSoftWrapFolderName: Boolean = false,
     allowSoftWrapFileName: Boolean = false,
     colors: FileSaverColors? = null,
@@ -66,12 +72,19 @@ fun FileSaverDialog(
     var selectedFileForInfo by remember { mutableStateOf<File?>(null) }
     var isListView by remember { mutableStateOf(true) }
 
-    val pathSegments = generateSequence(currentDir) { it.parentFile }
-        .toList()
-        .asReversed()
-
     var creatingNewFolder by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
+    var systemAccessWarning by remember { mutableStateOf<String?>(null) }
+
+    val resolver = remember { PathResolver(pathDisplayMode, allowSystemRootAccess) }
+    val breadcrumbSegments = remember(currentDir) { resolver.resolve(currentDir) }
+
+    LaunchedEffect(systemAccessWarning) {
+        if (systemAccessWarning != null) {
+            delay(3000)
+            systemAccessWarning = null
+        }
+    }
 
     val items = remember(currentDir) {
         currentDir.listFiles()
@@ -87,10 +100,6 @@ fun FileSaverDialog(
 
     val dialogState = rememberDialogState(position = WindowPosition(Alignment.Center))
     val pathScrollState = rememberScrollState()
-
-    LaunchedEffect(pathSegments) {
-        pathScrollState.animateScrollTo(pathScrollState.maxValue)
-    }
 
     DialogWindow(
         title = title,
@@ -119,12 +128,28 @@ fun FileSaverDialog(
                         Text("Saving as", style = MaterialTheme.typography.titleLarge)
                         Spacer(Modifier.height(16.dp))
 
-                        // Path segments with scrollbar
-                        PathSegmentsSection(
-                            pathScrollState = pathScrollState,
-                            pathSegments = pathSegments,
-                            onFolderSelected = { nav.navigateTo(it) }
+                        BreadcrumbPath(
+                            segments = breadcrumbSegments,
+                            onSegmentSelected = { segment ->
+                                if (resolver.isAccessible(segment.file)) {
+                                    nav.navigateTo(segment.file)
+                                } else {
+                                    systemAccessWarning = "System folders are not accessible in Home mode."
+                                }
+                            },
+                            showHomeIcon = true,
+                            separator = if (pathDisplayMode == PathDisplayMode.RAW_SYSTEM) " ${File.separator} " else "\u203A",
+                            skipFirstSeparator = pathDisplayMode == PathDisplayMode.RAW_SYSTEM && File.separator == "/"
                         )
+
+                        systemAccessWarning?.let { warning ->
+                            Text(
+                                text = warning,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
 
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopStart) {
                             SearchBarSection(

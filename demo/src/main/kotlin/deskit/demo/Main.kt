@@ -37,6 +37,7 @@ import deskit.demo.sections.FileSaverSection
 import deskit.demo.sections.FolderChooserSection
 import deskit.demo.sections.InfoDialogSection
 import deskit.demo.sections.IconTestSection
+import deskit.demo.sections.SystemRootAccessSection
 import deskit.demo.theme.DemoTheme
 import java.awt.Dimension
 
@@ -94,6 +95,7 @@ fun main() = application {
                         InfoDialogSection(onMessage = onMessage)
                         ConfirmationSection(onMessage = onMessage)
                         IconTestSection(onMessage = onMessage)
+                        SystemRootAccessSection(onMessage = onMessage)
                         Spacer(Modifier.height(24.dp))
                     }
                 }
